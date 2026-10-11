@@ -13,11 +13,6 @@ import os
 import sys
 from pathlib import Path
 
-# Windows: switch stdout/stdin to binary mode so \r\n in headers isn't mangled
-if sys.platform == "win32":
-    import msvcrt
-    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
-    msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
 
 _ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(_ROOT))
@@ -452,133 +447,82 @@ def _handle_status(args: dict) -> dict:
     }
 
 
-HANDLERS = {
-    "atlas_ingest": _handle_ingest,
-    "atlas_query": _handle_query,
-    "atlas_impact": _handle_impact,
-    "atlas_edge_check": _handle_edge_check,
-    "atlas_status": _handle_status,
-}
+import asyncio
+from mcp.server.mcpserver import MCPServer
+from mcp.server.models import InitializationOptions
+import mcp.types as mcp_types
 
 
-def _write(msg: dict):
-    """Write a JSON-RPC message to stdout."""
-    raw = json.dumps(msg)
-    data = f"Content-Length: {len(raw)}\r\n\r\n{raw}"
-    if sys.platform == "win32":
-        sys.stdout.buffer.write(data.encode("utf-8"))
-        sys.stdout.buffer.flush()
-    else:
-        sys.stdout.write(data)
-        sys.stdout.flush()
+def _make_mcp_server() -> MCPServer:
+    mcp = MCPServer(
+        name="atlas",
+        version="1.0.0",
+        instructions=SYSTEM_INSTRUCTION,
+    )
 
+    @mcp.tool(
+        name="atlas_ingest",
+        description=(
+            "Crawl a codebase and build a structured knowledge base in Meilisearch. "
+            "Call this before modifying any function/file to ensure the index is current. "
+            "Creates one index per project — no cross-contamination between projects."
+        ),
+    )
+    def atlas_ingest(root_path: str, project_id: str, languages: list[str] | None = None) -> str:
+        result = _handle_ingest({"root_path": root_path, "project_id": project_id, "languages": languages or ["python"]})
+        return json.dumps(result, indent=2)
 
-def _read() -> dict | None:
-    """Read a JSON-RPC message from stdin."""
-    headers = {}
-    _in = sys.stdin.buffer if sys.platform == "win32" else sys.stdin
-    while True:
-        line = _in.readline()
-        if not line:
-            return None
-        line = line.decode("utf-8") if isinstance(line, bytes) else line
-        line = line.strip()
-        if not line:
-            break
-        if ":" in line:
-            key, val = line.split(":", 1)
-            headers[key.strip()] = val.strip()
+    @mcp.tool(
+        name="atlas_query",
+        description=(
+            "Query a codebase's Meilisearch index with a natural language question. "
+            "Call this before modifying any function/file to understand what exists. "
+            "Only retrieves what actually exists — never predicts or generates. "
+            "Use bridge_type filter to restrict to cross-language relationships "
+            "(http, env_var, config_file, db_schema, shared_type)."
+        ),
+    )
+    def atlas_query(question: str, project_id: str, limit: int = 20, bridge_type: str | None = None) -> str:
+        result = _handle_query({"question": question, "project_id": project_id, "limit": limit, "bridge_type": bridge_type})
+        return json.dumps(result, indent=2)
 
-    content_length = int(headers.get("Content-Length", 0))
-    if content_length == 0:
-        return None
+    @mcp.tool(
+        name="atlas_impact",
+        description=(
+            "Find all functions that depend on the given functions via call graph edges. "
+            "Call this before modifying any function/file to see what will be affected."
+        ),
+    )
+    def atlas_impact(functions: list[str], project_id: str, max_depth: int = 3) -> str:
+        result = _handle_impact({"functions": functions, "project_id": project_id, "max_depth": max_depth})
+        return json.dumps(result, indent=2)
 
-    body = _in.read(content_length)
-    if isinstance(body, bytes):
-        body = body.decode("utf-8")
-    return json.loads(body)
+    @mcp.tool(
+        name="atlas_edge_check",
+        description=(
+            "Full edge-case pipeline: find all affected functions for a proposed change, "
+            "gather their code, and send to the verifier to surface vulnerabilities. "
+            "Call this before modifying any function/file."
+        ),
+    )
+    def atlas_edge_check(code: str, functions: list[str], project_id: str, language: str = "python") -> str:
+        result = _handle_edge_check({"code": code, "functions": functions, "project_id": project_id, "language": language})
+        return json.dumps(result, indent=2)
+
+    @mcp.tool(
+        name="atlas_status",
+        description="Check whether a project has been indexed and get index stats.",
+    )
+    def atlas_status(project_id: str) -> str:
+        result = _handle_status({"project_id": project_id})
+        return json.dumps(result, indent=2)
+
+    return mcp
 
 
 def main():
-    while True:
-        msg = _read()
-        if msg is None:
-            break
-
-        method = msg.get("method", "")
-        msg_id = msg.get("id")
-
-        if method == "initialize":
-            _write({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {
-                        "tools": {"listChanged": False},
-                    },
-                    "serverInfo": {
-                        "name": "atlas",
-                        "version": "1.0.0",
-                    },
-                    "instructions": SYSTEM_INSTRUCTION,
-                },
-            })
-
-        elif method == "notifications/initialized":
-            pass
-
-        elif method == "tools/list":
-            _write({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {"tools": TOOLS},
-            })
-
-        elif method == "tools/call":
-            params = msg.get("params", {})
-            tool_name = params.get("name", "")
-            tool_args = params.get("arguments", {})
-
-            handler = HANDLERS.get(tool_name)
-            if handler is None:
-                _write({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "result": {
-                        "content": [{"type": "text", "text": f"Unknown tool: {tool_name}"}],
-                        "isError": True,
-                    },
-                })
-            else:
-                try:
-                    result = handler(tool_args)
-                    _write({
-                        "jsonrpc": "2.0",
-                        "id": msg_id,
-                        "result": {
-                            "content": [{"type": "text", "text": json.dumps(result, indent=2)}],
-                        },
-                    })
-                except Exception as exc:
-                    _write({
-                        "jsonrpc": "2.0",
-                        "id": msg_id,
-                        "result": {
-                            "content": [{"type": "text", "text": f"Error: {exc}"}],
-                            "isError": True,
-                        },
-                    })
-
-        elif method == "ping":
-            _write({"jsonrpc": "2.0", "id": msg_id, "result": {}})
-
-        elif msg_id is not None:
-            _write({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "error": {"code": -32601, "message": f"Method not found: {method}"},
-            })
+    mcp = _make_mcp_server()
+    asyncio.run(mcp.run_stdio_async())
 
 
 if __name__ == "__main__":
