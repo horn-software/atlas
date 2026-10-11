@@ -50,4 +50,4 @@ Subscribe at [hornsa.com/atlas](https://hornsa.com/atlas).
 
 ## Contact
 
-legal@hornsa.com
+hello@hornsoftwarearchitects.co.za

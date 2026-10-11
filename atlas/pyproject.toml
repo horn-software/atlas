@@ -9,7 +9,7 @@ description = "Atlas — local MCP server for codebase ingestion, AI-powered que
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
-authors = [{ name = "Horn Software Architects", email = "atlas@hornsa.com" }]
+authors = [{ name = "Horn Software Architects", email = "hello@hornsoftwarearchitects.co.za" }]
 keywords = ["mcp", "codebase", "ai", "claude", "developer-tools", "code-search"]
 classifiers = [
     "Development Status :: 4 - Beta",

@@ -114,7 +114,7 @@ The training pipeline, trained model weights, and verifier bridge are proprietar
 ## Support
 
 - Issues: [github.com/horn-software/atlas/issues](https://github.com/horn-software/atlas/issues)
-- Email: support@hornsa.com
+- Email: hello@hornsoftwarearchitects.co.za
 - Docs: [hornsa.com/atlas/docs](https://hornsa.com/atlas/docs)
 
 ---
