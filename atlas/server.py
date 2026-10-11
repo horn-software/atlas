@@ -469,7 +469,7 @@ def _make_mcp_server() -> MCPServer:
         ),
     )
     def atlas_ingest(root_path: str, project_id: str, languages: list[str] | None = None) -> str:
-        result = _handle_ingest({"root_path": root_path, "project_id": project_id, "languages": languages or ["python"]})
+        result = _handle_ingest({"root_path": root_path, "project_id": project_id, "languages": languages or ["python", "javascript", "typescript"]})
         return json.dumps(result, indent=2)
 
     @mcp.tool(
