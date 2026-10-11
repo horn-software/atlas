@@ -61,7 +61,7 @@ def _start_meilisearch(project_dir: Path):
     key = _meili_platform_key()
     url = MEILI_URLS.get(key)
     if not url:
-        print(f"  ✗ Unsupported platform: {platform.system()} {platform.machine()}")
+        print(f"  [ERROR] Unsupported platform: {platform.system()} {platform.machine()}")
         print("    Download Meilisearch manually from https://www.meilisearch.com/docs/learn/getting_started/installation")
         sys.exit(1)
 
@@ -78,7 +78,7 @@ def _start_meilisearch(project_dir: Path):
         try:
             urllib.request.urlretrieve(url, str(bin_path))
         except Exception as e:
-            print(f"  ✗ Download failed: {e}")
+            print(f"  [ERROR] Download failed: {e}")
             print("    Download Meilisearch manually from https://www.meilisearch.com/docs/learn/getting_started/installation")
             sys.exit(1)
 
@@ -100,7 +100,7 @@ def _start_meilisearch(project_dir: Path):
             print("  Meilisearch is up.")
             return
 
-    print("  ✗ Meilisearch did not start within 30 seconds.")
+    print("  [ERROR] Meilisearch did not start within 30 seconds.")
     print(f"    Run it manually: {bin_path} --db-path {data_dir} --master-key {MEILI_KEY}")
     sys.exit(1)
 
@@ -202,7 +202,7 @@ def _run_train(project_dir: Path, project_id: str, count: int = 2500, epochs: in
     with open(data_path, "w", encoding="utf-8") as f:
         for ex in examples:
             f.write(json.dumps(ex, ensure_ascii=False) + "\n")
-    print(f"  Generated {len(examples)} training examples → {data_path}")
+    print(f"  Generated {len(examples)} training examples -> {data_path}")
 
     import types
     train_args = types.SimpleNamespace(
@@ -235,7 +235,7 @@ def cmd_init(project_dir: Path):
     print()
     print("[3/4] Ingesting codebase ...")
     result = _run_ingest(project_dir, project_id)
-    print(f"  {result['files']} files  |  {result['entities']} entities  |  {result['bridges']} bridges  →  {result['indexed']} documents indexed")
+    print(f"  {result['files']} files  |  {result['entities']} entities  |  {result['bridges']} bridges  ->  {result['indexed']} documents indexed")
 
     print()
     print("[4/4] Training query model ...")
@@ -290,7 +290,7 @@ def _write_mcp_config(project_dir: Path, project_id: str):
         print(f"  .claude/settings.json already up to date.")
     else:
         print()
-        print(f"  Wrote MCP config → {settings_path}")
+        print(f"  Wrote MCP config -> {settings_path}")
 
 
 def cmd_status(project_dir: Path):
