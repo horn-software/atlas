@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.env
+*.env
+
+# Atlas — CLOSED SOURCE FILES (never commit these)
+atlas/query/train.py
+atlas/query/generate_data.py
+atlas/query/data.jsonl
+atlas/query/model/query_model.pt
+atlas/query/model/vocab.json
+atlas/query/model/config.json
+atlas/keygen.py
+atlas/edge/bridge.py
+license_server/
+
+# Atlas — private keys (never commit these)
+.atlas/
+**/.atlas/
+*.pem
+private.pem
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+*.jsonl
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
