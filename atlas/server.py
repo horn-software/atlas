@@ -13,6 +13,12 @@ import os
 import sys
 from pathlib import Path
 
+# Windows: switch stdout/stdin to binary mode so \r\n in headers isn't mangled
+if sys.platform == "win32":
+    import msvcrt
+    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+
 _ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(_ROOT))
 sys.path.insert(0, str(_ROOT.parent))
@@ -458,17 +464,24 @@ HANDLERS = {
 def _write(msg: dict):
     """Write a JSON-RPC message to stdout."""
     raw = json.dumps(msg)
-    sys.stdout.write(f"Content-Length: {len(raw)}\r\n\r\n{raw}")
-    sys.stdout.flush()
+    data = f"Content-Length: {len(raw)}\r\n\r\n{raw}"
+    if sys.platform == "win32":
+        sys.stdout.buffer.write(data.encode("utf-8"))
+        sys.stdout.buffer.flush()
+    else:
+        sys.stdout.write(data)
+        sys.stdout.flush()
 
 
 def _read() -> dict | None:
     """Read a JSON-RPC message from stdin."""
     headers = {}
+    _in = sys.stdin.buffer if sys.platform == "win32" else sys.stdin
     while True:
-        line = sys.stdin.readline()
+        line = _in.readline()
         if not line:
             return None
+        line = line.decode("utf-8") if isinstance(line, bytes) else line
         line = line.strip()
         if not line:
             break
@@ -480,7 +493,9 @@ def _read() -> dict | None:
     if content_length == 0:
         return None
 
-    body = sys.stdin.read(content_length)
+    body = _in.read(content_length)
+    if isinstance(body, bytes):
+        body = body.decode("utf-8")
     return json.loads(body)
 
 
