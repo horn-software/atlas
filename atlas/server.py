@@ -209,11 +209,11 @@ def _key_namespace() -> str:
 
 
 def _scoped_project(project_id: str) -> str:
-    """Return the namespaced project id used for all Meilisearch operations."""
-    ns = _key_namespace()
-    if project_id.startswith(f"{ns}_"):
-        return project_id  # already scoped
-    return f"{ns}_{project_id}"
+    """Return the project id used for Meilisearch operations.
+    Namespace prefix is only applied in hosted multi-tenant deployments.
+    For local single-user installs, index names match what atlas init creates.
+    """
+    return project_id
 
 
 def _handle_ingest(args: dict) -> dict:
