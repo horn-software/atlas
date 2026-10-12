@@ -24,7 +24,7 @@ sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent))
 
 MEILI_URL = "http://localhost:7700"
-MEILI_KEY = "atlas_master_key_local"
+MEILI_KEY = "poc_master_key_local_1234567890"
 
 MEILI_URLS = {
     ("linux", "x86_64"): "https://github.com/meilisearch/meilisearch/releases/latest/download/meilisearch-linux-amd64",

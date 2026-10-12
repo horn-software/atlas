@@ -3,8 +3,8 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "atlas-mcp"
-version = "0.1.0"
+name = "hornsa-atlas"
+version = "0.1.1"
 description = "Atlas — local MCP server for codebase ingestion, AI-powered query, impact analysis, and edge-case detection"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -38,7 +38,7 @@ parsers = [
     "tree-sitter-javascript>=0.21",
     "tree-sitter-typescript>=0.21",
 ]
-all = ["atlas-mcp[parsers]"]
+all = ["hornsa-atlas[parsers]"]
 
 [project.scripts]
 atlas = "atlas.cli:main"
