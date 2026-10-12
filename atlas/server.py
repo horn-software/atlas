@@ -20,7 +20,12 @@ sys.path.insert(0, str(_ROOT.parent))
 
 try:
     from dotenv import load_dotenv
-    load_dotenv(_ROOT.parent / ".env")
+    # Load project .env first (cwd), then fall back to atlas parent .env
+    _cwd_env = Path.cwd() / ".env"
+    if _cwd_env.exists():
+        load_dotenv(str(_cwd_env), override=True)
+    else:
+        load_dotenv(_ROOT.parent / ".env")
 except ImportError:
     pass
 
@@ -216,7 +221,61 @@ def _scoped_project(project_id: str) -> str:
     return project_id
 
 
+_meili_started = False
+
+def _ensure_meilisearch() -> bool:
+    """Start Meilisearch if it isn't already running. Returns True if up."""
+    global _meili_started
+    import urllib.request as _ur
+    meili_url = os.environ.get("MEILI_URL", "http://localhost:7700")
+    meili_key = os.environ.get("MEILI_KEY", "poc_master_key_local_1234567890")
+
+    def _is_up():
+        try:
+            req = _ur.Request(f"{meili_url}/health",
+                              headers={"Authorization": f"Bearer {meili_key}"})
+            with _ur.urlopen(req, timeout=2) as r:
+                return r.status == 200
+        except Exception:
+            return False
+
+    if _is_up():
+        return True
+    if _meili_started:
+        return False  # already tried this session, don't loop
+
+    # Try to find and launch the Meilisearch binary atlas init downloaded
+    import platform, subprocess, time
+    suffix = ".exe" if platform.system().lower() == "windows" else ""
+    # Search common locations: project .atlas/bin, then home .atlas/bin
+    cwd = Path.cwd()
+    candidates = [
+        cwd / ".atlas" / "bin" / f"meilisearch{suffix}",
+        cwd.parent / ".atlas" / "bin" / f"meilisearch{suffix}",
+        Path.home() / ".atlas" / "bin" / f"meilisearch{suffix}",
+    ]
+    bin_path = next((p for p in candidates if p.exists()), None)
+    if bin_path is None:
+        return False
+
+    data_dir = bin_path.parent.parent / "meili_data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    subprocess.Popen(
+        [str(bin_path), "--db-path", str(data_dir),
+         "--master-key", meili_key, "--no-analytics"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    _meili_started = True
+    for _ in range(20):
+        time.sleep(1)
+        if _is_up():
+            return True
+    return False
+
+
 def _handle_ingest(args: dict) -> dict:
+    _ensure_meilisearch()
     root_path = args["root_path"]
     project_id = args["project_id"]
     scoped_id = _scoped_project(project_id)
@@ -332,6 +391,7 @@ def _compact_hit(hit: dict) -> dict:
 
 
 def _handle_query(args: dict) -> dict:
+    _ensure_meilisearch()
     from usage import log_call
     log_call("atlas_query", args.get("project_id"), _current_tier())
     question = args["question"]
@@ -414,6 +474,7 @@ def _handle_query(args: dict) -> dict:
 
 
 def _handle_impact(args: dict) -> dict:
+    _ensure_meilisearch()
     from usage import log_call
     log_call("atlas_impact", args.get("project_id"), _current_tier())
     from edge.impact import find_impact
@@ -428,6 +489,7 @@ def _handle_impact(args: dict) -> dict:
 
 
 def _handle_edge_check(args: dict) -> dict:
+    _ensure_meilisearch()
     from usage import log_call
     log_call("atlas_edge_check", args.get("project_id"), _current_tier())
     from license import requires_pro
@@ -475,6 +537,7 @@ def _handle_edge_check(args: dict) -> dict:
 
 
 def _handle_status(args: dict) -> dict:
+    _ensure_meilisearch()
     from usage import log_call
     log_call("atlas_status", args.get("project_id"), _current_tier())
     project_id = args["project_id"]
