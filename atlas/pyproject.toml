@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hornsa-atlas"
-version = "0.1.5"
+version = "0.1.6"
 description = "Atlas — local MCP server for codebase ingestion, AI-powered query, impact analysis, and edge-case detection"
 readme = "README.md"
 license = { text = "Apache-2.0" }
