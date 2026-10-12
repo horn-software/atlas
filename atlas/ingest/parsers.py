@@ -427,6 +427,7 @@ def _parse_js(root, rel_path, source_lines, source, lang) -> list[dict]:
                 "parent_class": "",
                 "decorators": [],
             })
+            _extract_nested_arrow_fns(node, rel_path, source_lines, lang, entities, parent_name=name)
 
         elif node.type == "export_statement":
             inner = _find_child(node, "function_declaration", "class_declaration",
@@ -450,21 +451,35 @@ def _parse_js(root, rel_path, source_lines, source, lang) -> list[dict]:
                     "parent_class": "",
                     "decorators": [],
                 })
+                _extract_nested_arrow_fns(inner, rel_path, source_lines, lang, entities, parent_name=name)
             elif inner and inner.type == "class_declaration":
                 _parse_js_class(inner, rel_path, source_lines, lang, entities)
             elif inner and inner.type == "lexical_declaration":
                 _parse_js_arrow_fns(inner, rel_path, source_lines, lang, entities)
+                # Also descend into any arrow fn body at this level
+                for decl in _find_children(inner, "variable_declarator"):
+                    arrow = _find_child(decl, "arrow_function")
+                    name_node = _find_child(decl, "identifier")
+                    if arrow and name_node:
+                        _extract_nested_arrow_fns(arrow, rel_path, source_lines, lang, entities,
+                                                  parent_name=_node_text(name_node))
 
         elif node.type == "class_declaration":
             _parse_js_class(node, rel_path, source_lines, lang, entities)
 
         elif node.type in ("lexical_declaration", "variable_declaration"):
             _parse_js_arrow_fns(node, rel_path, source_lines, lang, entities)
+            for decl in _find_children(node, "variable_declarator"):
+                arrow = _find_child(decl, "arrow_function")
+                name_node = _find_child(decl, "identifier")
+                if arrow and name_node:
+                    _extract_nested_arrow_fns(arrow, rel_path, source_lines, lang, entities,
+                                              parent_name=_node_text(name_node))
 
     return entities
 
 
-def _parse_js_arrow_fns(node, rel_path, source_lines, lang, entities):
+def _parse_js_arrow_fns(node, rel_path, source_lines, lang, entities, parent_name=""):
     for decl in _find_children(node, "variable_declarator"):
         name_node = _find_child(decl, "identifier")
         arrow = _find_child(decl, "arrow_function")
@@ -473,7 +488,7 @@ def _parse_js_arrow_fns(node, rel_path, source_lines, lang, entities):
             params = _find_child(arrow, "formal_parameters")
             sig = f"{name}{_node_text(params)}" if params else name
             entities.append({
-                "id": _hash_id(rel_path, name, "function"),
+                "id": _hash_id(rel_path, f"{parent_name}.{name}" if parent_name else name, "function"),
                 "kind": "function",
                 "name": name,
                 "file_path": rel_path,
@@ -486,9 +501,24 @@ def _parse_js_arrow_fns(node, rel_path, source_lines, lang, entities):
                 "calls": _collect_calls_ts(arrow),
                 "called_by": [],
                 "imports": [],
-                "parent_class": "",
+                "parent_class": parent_name,
                 "decorators": [],
             })
+
+
+def _extract_nested_arrow_fns(fn_node, rel_path, source_lines, lang, entities, parent_name="", depth=0):
+    """Walk a function/arrow body and extract nested const arrow fn declarations (e.g. React handlers)."""
+    if depth > 2:
+        return
+    body = _find_child(fn_node, "statement_block", "expression_statement")
+    if body is None:
+        return
+    for child in body.children:
+        if child.type in ("lexical_declaration", "variable_declaration"):
+            _parse_js_arrow_fns(child, rel_path, source_lines, lang, entities, parent_name)
+        elif child.type in ("if_statement", "try_statement", "return_statement",
+                            "expression_statement", "block"):
+            _extract_nested_arrow_fns(child, rel_path, source_lines, lang, entities, parent_name, depth + 1)
 
 
 def _parse_js_class(node, rel_path, source_lines, lang, entities):
