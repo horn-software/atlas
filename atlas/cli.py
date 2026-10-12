@@ -261,7 +261,7 @@ def cmd_init(project_dir: Path):
 
 
 def _write_mcp_config(project_dir: Path, project_id: str):
-    """Write (or merge) the Atlas MCP entry into .claude/settings.json."""
+    """Write (or merge) the Atlas MCP entry into .claude/settings.json and .vscode/mcp.json."""
     atlas_path = str(_HERE / "server.py").replace("\\", "/")
     cwd_str = str(project_dir).replace("\\", "/")
 
@@ -271,6 +271,7 @@ def _write_mcp_config(project_dir: Path, project_id: str):
         "cwd": cwd_str,
     }
 
+    # ── Claude Code ──────────────────────────────────────────────────────────
     settings_dir = project_dir / ".claude"
     settings_path = settings_dir / "settings.json"
     settings_dir.mkdir(exist_ok=True)
@@ -285,7 +286,6 @@ def _write_mcp_config(project_dir: Path, project_id: str):
 
     servers = settings.setdefault("mcpServers", {})
     already_correct = servers.get("atlas") == entry
-
     servers["atlas"] = entry
     settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
 
@@ -294,7 +294,37 @@ def _write_mcp_config(project_dir: Path, project_id: str):
         print(f"  .claude/settings.json already up to date.")
     else:
         print()
-        print(f"  Wrote MCP config -> {settings_path}")
+        print(f"  Wrote Claude Code MCP config  -> {settings_path}")
+
+    # ── VS Code Copilot (agent mode, VS Code 1.99+) ──────────────────────────
+    vscode_dir = project_dir / ".vscode"
+    vscode_mcp_path = vscode_dir / "mcp.json"
+    vscode_dir.mkdir(exist_ok=True)
+
+    vscode_entry = {
+        "type": "stdio",
+        "command": "python",
+        "args": [atlas_path],
+        "cwd": cwd_str,
+    }
+
+    if vscode_mcp_path.exists():
+        try:
+            vscode_cfg = json.loads(vscode_mcp_path.read_text(encoding="utf-8"))
+        except Exception:
+            vscode_cfg = {}
+    else:
+        vscode_cfg = {}
+
+    vscode_servers = vscode_cfg.setdefault("servers", {})
+    vscode_already_correct = vscode_servers.get("atlas") == vscode_entry
+    vscode_servers["atlas"] = vscode_entry
+    vscode_mcp_path.write_text(json.dumps(vscode_cfg, indent=2), encoding="utf-8")
+
+    if vscode_already_correct:
+        print(f"  .vscode/mcp.json already up to date.")
+    else:
+        print(f"  Wrote VS Code Copilot MCP config -> {vscode_mcp_path}")
 
 
 def cmd_status(project_dir: Path):
