@@ -343,13 +343,18 @@ def _handle_query(args: dict) -> dict:
                 token_logits, kind_logits = model(ids, lengths)
                 token_preds = token_logits.argmax(dim=-1).squeeze(0).tolist()
                 kind_idx = kind_logits.argmax(dim=-1).item()
+                import torch.nn.functional as F
+                kind_conf = F.softmax(kind_logits, dim=-1)[0, kind_idx].item()
 
             kept = [w for w, p in zip(tokens, token_preds) if p == 1]
             if kept:
                 query_text = " ".join(kept)
 
             predicted_kind = KIND_LABELS[kind_idx]
-            if predicted_kind not in ("any", "import"):
+            # Only filter by kind when the model is confident and the
+            # prediction is a meaningful structural kind (not "any" or
+            # "import", which appear spuriously on cross-codebase queries).
+            if predicted_kind not in ("any", "import") and kind_conf >= 0.80:
                 filter_kind = predicted_kind
     except Exception:
         pass
