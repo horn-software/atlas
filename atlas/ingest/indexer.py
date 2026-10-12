@@ -22,7 +22,8 @@ MEILI_KEY = os.environ.get("MEILI_KEY", "")
 INDEX_SETTINGS = {
     "searchableAttributes": [
         "name", "signature", "docstring",
-        "body_preview", "imports", "decorators", "file_path",
+        "body_preview", "calls", "called_by",
+        "imports", "file_path",
         "route_path", "variable_name",
     ],
     "filterableAttributes": [
