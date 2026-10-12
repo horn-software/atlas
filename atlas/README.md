@@ -1,72 +1,95 @@
 # Atlas
 
-**Local MCP server for codebase ingestion, AI-powered query, impact analysis, and edge-case detection.**
+**Stop your AI from reading your codebase on every question.**
 
-Atlas gives AI coding assistants (Claude, Cursor, Windsurf, VS Code) a structured knowledge base of your codebase — so they make 1 tool call instead of 15.
+Atlas is a local MCP server that indexes your codebase into a structured search database. Instead of opening files and grepping for context, your AI assistant asks Atlas once and gets the answer.
+
+---
+
+## The problem
+
+Every time you ask your AI assistant a question about your code, it reads files:
 
 ```
-Without Atlas: Claude opens 7 files, runs 5 greps, makes 15 tool calls to understand context
-With Atlas:    1 call to atlas_query. Done.
+Tool: Read(src/auth/middleware.py)
+Tool: Read(src/auth/tokens.py)
+Tool: Grep(pattern="verify_token", path="src/")
+Tool: Read(src/users/models.py)
+Tool: Read(tests/test_auth.py)
+...
 ```
 
-Measured **93% reduction in tool-call overhead** per coding task.
+That's 5–15 tool calls, thousands of tokens, and several seconds — for a single question.
+
+## The fix
+
+```
+Tool: atlas_query(project_id="my-app", question="what functions handle token verification")
+
+→ Result in 2ms. 0 files read.
+```
+
+## Benchmark
+
+| | Without Atlas | With Atlas |
+|---|---|---|
+| Tool calls | 15 | 1 |
+| Files opened | 5 | 0 |
+| Grep operations | 7 | 0 |
+| Time | ~8s | ~2ms |
+| Tokens used | ~18,000 | ~2,300 |
+
+**Token cost saving: ~$30/month** on a normal workload. The Pro subscription costs $19/month.
+
+---
+
+## Install
+
+```bash
+pip install "hornsa-atlas[parsers]"
+```
+
+Python 3.11+ required.
+
+## Quick start
+
+```bash
+# Inside your project directory:
+atlas init
+
+# Reload your AI assistant (VS Code: Ctrl+Shift+P → Reload Window)
+# Then ask your assistant anything about your codebase.
+```
+
+`atlas init` handles everything: downloads Meilisearch, indexes your project, writes the MCP config for your client automatically.
+
+---
+
+## MCP Tools
+
+| Tool | What it does |
+|------|-------------|
+| `atlas_ingest` | Index your codebase (AST parsing, 18 languages) |
+| `atlas_query` | Natural language question → structured results |
+| `atlas_impact` | Find all functions affected by a change |
+| `atlas_edge_check` | Full impact analysis + edge case detection |
+| `atlas_status` | Check index status for a project |
+
+## Supported languages
+
+Python, JavaScript, TypeScript, Go, Rust, Java, C#, C, C++, Ruby, PHP, Swift, Kotlin, Scala, Lua, Elixir, Dart, Zig
+
+## Supported clients
+
+Claude Code, Claude Desktop, Cursor, Continue (VS Code), Zed — any MCP-compatible client.
 
 ---
 
 ## How it works
 
-Atlas runs as a local MCP server. It indexes your codebase into a local [Meilisearch](https://www.meilisearch.com/) instance, then exposes 5 tools your AI client calls over stdio — no cloud, no API key, no data leaving your machine.
+Atlas parses your codebase using tree-sitter and stores every function, class, method, and module in a local Meilisearch index. At query time, a small BiLSTM model (~652K parameters, trained on your code, running at 2ms on CPU) extracts the relevant tokens from your question and retrieves the matching entities.
 
-### The five tools
-
-| Tool | What it does |
-|------|-------------|
-| `atlas_ingest` | Crawl a codebase, parse 18 languages, build a call graph, detect cross-language bridges, write to local index |
-| `atlas_query` | Natural language question → BiLSTM query model → structured results |
-| `atlas_impact` | Given a list of functions, find every function that would break if they change |
-| `atlas_edge_check` | Full safety pass: impact analysis + verification layer over proposed code change *(Pro)* |
-| `atlas_status` | Check if a project is indexed and how many documents are in the index |
-
-### Supported languages
-
-Python, JavaScript, TypeScript, Go, Rust, Java, C#, C, C++, Ruby, PHP, Swift, Kotlin, Scala, Lua, Elixir, Dart, Zig
-
-### Cross-language bridge detection
-
-Atlas detects relationships that span language boundaries:
-- HTTP/REST route matching between frontend and backend
-- Shared environment variable references
-- Shared config file references
-- Database schema/table bridges across ORMs
-- Shared type/interface definitions
-
----
-
-## Installation
-
-```bash
-pip install atlas-mcp
-atlas init
-```
-
-`atlas init` will:
-1. Download and start Meilisearch locally
-2. Crawl and index your codebase
-3. Write the MCP config to `.claude/settings.json`
-
-### MCP config (Claude Desktop / VS Code)
-
-```json
-{
-  "mcpServers": {
-    "atlas": {
-      "command": "python",
-      "args": ["-m", "atlas.server"],
-      "env": { "ATLAS_KEY": "your-licence-key" }
-    }
-  }
-}
-```
+**No code leaves your machine.** Meilisearch runs locally. The model runs locally. The only data sent to Atlas servers is your licence key (once per day for validation) and your project ID (for free-tier limit enforcement). No source code. Ever.
 
 ---
 
@@ -74,49 +97,52 @@ atlas init
 
 | Tier | Price | Projects | Languages | Query model |
 |------|-------|----------|-----------|-------------|
-| Free | $0 | 1 | Python only | Raw keyword search |
+| Free | $0 | 1 | Python | Keyword search |
 | Pro | $19/month | Unlimited | All 18 | Trained BiLSTM |
-| Team | $79/seat/month | Unlimited | All 18 | Trained BiLSTM + shared indexes |
-| Enterprise | $149/seat/month | Unlimited | All 18 | Full suite + SSO + SLA |
+| Team | $49/seat/month | Shared indexes | All 18 | Trained BiLSTM |
 
-Get your licence key at **[hornsa.com/atlas](https://hornsa.com/atlas)**
-
----
-
-## Open-core model
-
-The ingestion pipeline, MCP server, call graph walker, and model architecture are open source (Apache 2.0).
-
-The training pipeline, trained model weights, and verifier bridge are proprietary — distributed to paid licence holders only.
-
-| Component | Licence |
-|-----------|---------|
-| `atlas/ingest/` | Apache 2.0 |
-| `atlas/server.py` | Apache 2.0 |
-| `atlas/edge/impact.py` | Apache 2.0 |
-| `atlas/query/net.py` | Apache 2.0 |
-| `atlas/cli.py` | Apache 2.0 |
-| Training pipeline | Proprietary |
-| Trained weights | Proprietary |
-| Verifier bridge | Proprietary |
+[Get Atlas Pro →](https://paystack.shop/pay/atlas-pro)
 
 ---
 
-## Requirements
+## Pro activation
 
-- Python 3.11+
-- 4 GB RAM (8 GB recommended for large codebases)
-- 2 GB disk (Meilisearch + weights)
-- Internet required at install and for daily licence token refresh
+After purchase, you receive a licence key by email. Activate it once:
 
----
+```bash
+atlas activate ATLAS-xxxx.xxxx
+```
 
-## Support
-
-- Issues: [github.com/horn-software/atlas/issues](https://github.com/horn-software/atlas/issues)
-- Email: hello@hornsoftwarearchitects.co.za
-- Docs: [hornsa.com/atlas/docs](https://hornsa.com/atlas/docs)
+The key is stored locally in `~/.atlas/config.json`. No ongoing server call after activation.
 
 ---
 
-*Built by [Horn Software Architects](https://hornsa.com)*
+## Commands
+
+```bash
+atlas init              # Set up Atlas for the current project
+atlas status            # Check index status
+atlas activate <key>    # Activate a Pro licence key
+atlas guard on          # Block Grep/Glob to enforce atlas_query usage
+atlas guard off         # Remove the guard
+atlas retrain           # Retrain the query model on updated codebase (Pro)
+```
+
+---
+
+## Architecture
+
+- **Ingest layer**: tree-sitter AST parsing for 18 languages, stored in Meilisearch (`code_{project_id}` index)
+- **Query layer**: BiLSTM token classifier extracts KEEP tokens from natural language, fires structured query at Meilisearch
+- **Edge layer**: call graph walker for impact analysis, bridge resolver for cross-language detection (HTTP routes, env vars, config files, DB schemas, shared types)
+- **Transport**: MCP stdio (works with all MCP clients on Windows, Mac, Linux)
+- **Local-only**: Meilisearch runs at `127.0.0.1:7700`, auto-started by Atlas
+
+## Licence
+
+The ingest engine, server scaffolding, and MCP tool definitions are open source (Apache 2.0).  
+The trained query model weights, training pipeline, and bridge resolver are proprietary (see [Commercial Licence](https://hornsa.com/atlas/legal/commercial-licence)).
+
+---
+
+Built by [Horn Software Architects](https://hornsa.com) · [hornsa.com/atlas](https://hornsa.com/atlas)
