@@ -75,9 +75,12 @@ TOOLS = [
     {
         "name": "atlas_query",
         "description": (
-            "Query a codebase's Meilisearch index with a natural language question. "
-            "Call this before modifying any function/file to understand what exists. "
-            "Only retrieves what actually exists — never predicts or generates. "
+            "Query a codebase's structured index with a natural language question. "
+            "Returns indexed functions, classes, routes, and variables — only what actually exists. "
+            "PRECISION TIP: use specific symbol names (signIn, useAuth, onAuthStateChanged) rather "
+            "than conceptual terms (authentication functions). The query model extracts key tokens "
+            "and searches against function names, signatures, call graph (calls/called_by), and "
+            "body previews. For discovery, use broad terms; for precision, name the symbols. "
             "Use bridge_type filter to restrict to cross-language relationships "
             "(http, env_var, config_file, db_schema, shared_type)."
         ),
@@ -86,7 +89,11 @@ TOOLS = [
             "properties": {
                 "question": {
                     "type": "string",
-                    "description": "Natural language question about the codebase",
+                    "description": (
+                        "Natural language question or space-separated symbol names. "
+                        "Examples: 'signIn signOut handleSubmit' (precise) or "
+                        "'what handles user authentication' (discovery)."
+                    ),
                 },
                 "project_id": {
                     "type": "string",
@@ -95,7 +102,7 @@ TOOLS = [
                 "limit": {
                     "type": "integer",
                     "description": "Maximum number of results to return (default 10; raise to 20 for broad discovery queries)",
-                    "default": 20,
+                    "default": 10,
                 },
                 "bridge_type": {
                     "type": "string",
