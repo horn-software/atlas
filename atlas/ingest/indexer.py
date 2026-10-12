@@ -168,17 +168,29 @@ def get_index_stats(project_id: str) -> dict:
     return data
 
 
-def search(project_id: str, query: str, filters: str | None = None, limit: int = 20) -> list[dict]:
+def search(project_id: str, query: str, filters: str | None = None, limit: int = 10,
+           min_score: float = 0.05) -> list[dict]:
     """Search a project's codebase index."""
     if _requests is None:
         raise RuntimeError("requests library not installed")
 
     idx = _index_name(project_id)
     url = f"{MEILI_URL}/indexes/{idx}/search"
-    body: dict = {"q": query, "limit": limit}
+    body: dict = {
+        "q": query,
+        "limit": limit,
+        "showRankingScore": True,
+    }
     if filters:
         body["filter"] = filters
 
     resp = _requests.post(url, json=body, headers=_headers(), timeout=10)
     resp.raise_for_status()
-    return resp.json().get("hits", [])
+    hits = resp.json().get("hits", [])
+    # Drop low-relevance hits; remove the internal score field before returning
+    out = []
+    for h in hits:
+        score = h.pop("_rankingScore", 1.0)
+        if score >= min_score:
+            out.append(h)
+    return out

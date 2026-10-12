@@ -94,7 +94,7 @@ TOOLS = [
                 },
                 "limit": {
                     "type": "integer",
-                    "description": "Maximum number of results to return",
+                    "description": "Maximum number of results to return (default 10; raise to 20 for broad discovery queries)",
                     "default": 20,
                 },
                 "bridge_type": {
@@ -397,7 +397,7 @@ def _handle_query(args: dict) -> dict:
     question = args["question"]
     project_id = args["project_id"]
     scoped_id = _scoped_project(project_id)
-    limit = args.get("limit", 20)
+    limit = args.get("limit", 10)
 
     query_text = question
     filter_kind = None
@@ -589,7 +589,7 @@ def _make_mcp_server() -> MCPServer:
             "(http, env_var, config_file, db_schema, shared_type)."
         ),
     )
-    def atlas_query(question: str, project_id: str, limit: int = 20, bridge_type: str | None = None) -> str:
+    def atlas_query(question: str, project_id: str, limit: int = 10, bridge_type: str | None = None) -> str:
         result = _handle_query({"question": question, "project_id": project_id, "limit": limit, "bridge_type": bridge_type})
         return json.dumps(result, indent=2)
 
