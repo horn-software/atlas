@@ -349,7 +349,7 @@ def _handle_query(args: dict) -> dict:
                 query_text = " ".join(kept)
 
             predicted_kind = KIND_LABELS[kind_idx]
-            if predicted_kind != "any":
+            if predicted_kind not in ("any", "import"):
                 filter_kind = predicted_kind
     except Exception:
         pass
