@@ -406,7 +406,10 @@ def _handle_query(args: dict) -> dict:
         from query.net import CodeQueryModel, PAD_IDX, UNK_IDX, KIND_LABELS
         import torch
 
-        model_dir = _ROOT / "query" / "model"
+        # Per-project model: <project_cwd>/.atlas/model/
+        # Fall back to the shared atlas/query/model/ for backwards compat.
+        _project_model = Path.cwd() / ".atlas" / "model"
+        model_dir = _project_model if _project_model.exists() else _ROOT / "query" / "model"
         config_path = model_dir / "config.json"
         vocab_path = model_dir / "vocab.json"
         weights_path = model_dir / "query_model.pt"

@@ -18,6 +18,9 @@ env/
 # Nested copy artefacts (git accident cleanup)
 atlas/atlas/
 
+# Per-project trained model weights (stored in each project's .atlas/)
+**/.atlas/model/
+
 # Atlas — CLOSED SOURCE FILES (never commit these)
 atlas/query/train.py
 atlas/query/generate_data.py

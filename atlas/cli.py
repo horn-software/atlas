@@ -198,7 +198,10 @@ def _run_train(project_dir: Path, project_id: str, count: int = 2500, epochs: in
 
     examples = generate_from_entities(entities, target_count=count)
 
-    data_path = _HERE / "query" / "data.jsonl"
+    model_dir = project_dir / ".atlas" / "model"
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    data_path = model_dir / "data.jsonl"
     with open(data_path, "w", encoding="utf-8") as f:
         for ex in examples:
             f.write(json.dumps(ex, ensure_ascii=False) + "\n")
@@ -210,6 +213,7 @@ def _run_train(project_dir: Path, project_id: str, count: int = 2500, epochs: in
         epochs=epochs,
         lr=0.001,
         batch=32,
+        model_dir=str(model_dir),
     )
     run_train(train_args)
 
@@ -313,7 +317,7 @@ def cmd_status(project_dir: Path):
     print(f"  documents:   {stats.get('numberOfDocuments', 0):,}")
     print(f"  indexing:    {'yes' if stats.get('isIndexing') else 'no'}")
 
-    model_dir = _HERE / "query" / "model"
+    model_dir = project_dir / ".atlas" / "model"
     if (model_dir / "query_model.pt").exists():
         print(f"  query model: trained  ({model_dir})")
     else:
