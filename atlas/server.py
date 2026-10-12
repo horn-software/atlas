@@ -295,6 +295,42 @@ def _handle_ingest(args: dict) -> dict:
     }
 
 
+def _compact_hit(hit: dict) -> dict:
+    """Strip empty fields and cap body_preview to reduce response token cost."""
+    out = {
+        "kind": hit.get("kind", ""),
+        "name": hit.get("name", ""),
+        "file_path": hit.get("file_path", ""),
+        "line_start": hit.get("line_start"),
+        "line_end": hit.get("line_end"),
+    }
+    sig = hit.get("signature", "")
+    if sig:
+        out["signature"] = sig
+    doc = hit.get("docstring", "")
+    if doc:
+        out["docstring"] = doc
+    preview = hit.get("body_preview", "")
+    if preview:
+        out["body_preview"] = preview[:200]
+    calls = hit.get("calls") or []
+    if calls:
+        out["calls"] = calls
+    called_by = hit.get("called_by") or []
+    if called_by:
+        out["called_by"] = called_by
+    parent = hit.get("parent_class", "")
+    if parent:
+        out["parent_class"] = parent
+    # Bridge-specific fields
+    for key in ("bridge_type", "confidence", "variable_name", "route_path",
+                "languages", "files", "uses"):
+        val = hit.get(key)
+        if val:
+            out[key] = val
+    return out
+
+
 def _handle_query(args: dict) -> dict:
     from usage import log_call
     log_call("atlas_query", args.get("project_id"), _current_tier())
@@ -372,7 +408,7 @@ def _handle_query(args: dict) -> dict:
     return {
         "query": query_text,
         "filter_kind": filter_kind,
-        "results": hits,
+        "results": [_compact_hit(h) for h in hits],
         "count": len(hits),
     }
 
