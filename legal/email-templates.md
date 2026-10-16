@@ -30,13 +30,13 @@ That's it — your codebase querying upgrades are unlocked immediately.
 What's next:
 1. Run `atlas ingest --project my-project` to index your codebase
 2. Open your AI coding assistant and try: "What functions handle authentication?"
-3. Check the docs at hornsa.com/atlas/docs
+3. Check the docs at hornsoftwarearchitects.co.za/atlas/docs
 
 Questions? Reply to this email or join the community at github.com/horn-software/atlas/discussions.
 
 —
 The Atlas team
-hornsa.com/atlas
+hornsoftwarearchitects.co.za/atlas
 ```
 
 **Template variables:** [TIER], [LICENCE_KEY]
@@ -55,7 +55,7 @@ Hi there,
 Your Atlas Pro trial ends tomorrow.
 
 If you've been enjoying faster context loading and multi-language support,
-you can keep access by subscribing at hornsa.com/atlas.
+you can keep access by subscribing at hornsoftwarearchitects.co.za/atlas.
 
 If you choose not to subscribe, Atlas will revert to the Free tier:
 - 1 project only
@@ -64,7 +64,7 @@ If you choose not to subscribe, Atlas will revert to the Free tier:
 
 Your indexed data stays on your machine and doesn't disappear.
 
-Subscribe → hornsa.com/atlas
+Subscribe → hornsoftwarearchitects.co.za/atlas
 
 —
 The Atlas team
@@ -90,9 +90,9 @@ What this means:
 - The trained query model and verifier are disabled
 - Raw keyword search (the open-source core) still works
 
-You can resubscribe at any time at hornsa.com/atlas and your projects will be available again immediately.
+You can resubscribe at any time at hornsoftwarearchitects.co.za/atlas and your projects will be available again immediately.
 
-Resubscribe → hornsa.com/atlas
+Resubscribe → hornsoftwarearchitects.co.za/atlas
 
 If you cancelled by mistake or have questions, reply to this email.
 
@@ -136,7 +136,7 @@ The Atlas team
 ## Resend Setup Notes
 
 1. Create a Resend account at resend.com
-2. Add and verify the domain `hornsa.com`
+2. Add and verify the domain `hornsoftwarearchitects.co.za`
 3. Create each template above in Resend → Templates
 4. In `license_server/main.py`, replace `_log_pending_key()` with a call to the Resend API:
 

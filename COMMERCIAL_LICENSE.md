@@ -36,7 +36,7 @@ The following components are proprietary and owned exclusively by Petrus Horn tr
 
 These components may not be reproduced, redistributed, reverse-engineered, or used to build competing products.
 
-Access to proprietary components is governed by the [Commercial Licence Agreement](https://hornsa.com/atlas/legal/commercial-licence).
+Access to proprietary components is governed by the [Commercial Licence Agreement](https://hornsoftwarearchitects.co.za/atlas/legal/commercial-licence).
 
 ## Subscriptions
 
@@ -46,7 +46,7 @@ Access to proprietary components is governed by the [Commercial Licence Agreemen
 | Pro | $19/month | Trained model, all 18 languages, unlimited projects |
 | Team | $49/seat/month | Shared indexes, SSO, audit log |
 
-Subscribe at [hornsa.com/atlas](https://hornsa.com/atlas).
+Subscribe at [hornsoftwarearchitects.co.za/atlas](https://hornsoftwarearchitects.co.za/atlas).
 
 ## Contact
 

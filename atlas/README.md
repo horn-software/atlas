@@ -243,8 +243,8 @@ as publishable evidence.
 ## Licence
 
 The ingest engine, server scaffolding, and MCP tool definitions are open source (Apache 2.0).  
-The trained query model weights, training pipeline, and bridge resolver are proprietary (see [Commercial Licence](https://hornsa.com/atlas/legal/commercial-licence)).
+The trained query model weights, training pipeline, and bridge resolver are proprietary (see [Commercial Licence](https://hornsoftwarearchitects.co.za/atlas/legal/commercial-licence)).
 
 ---
 
-Built by [Horn Software Architects](https://hornsa.com) · [hornsa.com/atlas](https://hornsa.com/atlas)
+Built by [Horn Software Architects](https://hornsoftwarearchitects.co.za) · [hornsoftwarearchitects.co.za/atlas](https://hornsoftwarearchitects.co.za/atlas)

@@ -3,7 +3,7 @@
 **Last updated: 11 October 2026**
 **Effective date: 11 October 2026**
 
-This Privacy Policy describes how Petrus Horn trading as Horn Software Architects ("we", "us", "our") collects, uses, stores, and protects personal information in connection with Atlas. It applies to all users of Atlas and visitors to hornsa.com/atlas.
+This Privacy Policy describes how Petrus Horn trading as Horn Software Architects ("we", "us", "our") collects, uses, stores, and protects personal information in connection with Atlas. It applies to all users of Atlas and visitors to hornsoftwarearchitects.co.za/atlas.
 
 This policy complies with the **Protection of Personal Information Act, 4 of 2013 (POPIA)** of the Republic of South Africa and, where applicable, the **General Data Protection Regulation (GDPR)** of the European Union.
 
@@ -114,7 +114,7 @@ In the event of a data breach affecting your personal information, we will notif
 
 ## 8. Cookies
 
-hornsa.com/atlas uses only technically necessary cookies for session management. We do not use advertising or analytics cookies.
+hornsoftwarearchitects.co.za/atlas uses only technically necessary cookies for session management. We do not use advertising or analytics cookies.
 
 ---
 
@@ -126,7 +126,7 @@ Atlas is not directed at children under 18. We do not knowingly collect personal
 
 ## 10. Changes to This Policy
 
-We may update this policy. We will notify you by email and by posting the updated policy at hornsa.com/atlas/legal/privacy. The "last updated" date at the top will change. Continued use after the effective date constitutes acceptance.
+We may update this policy. We will notify you by email and by posting the updated policy at hornsoftwarearchitects.co.za/atlas/legal/privacy. The "last updated" date at the top will change. Continued use after the effective date constitutes acceptance.
 
 ---
 
@@ -136,4 +136,4 @@ For privacy questions, data subject requests, or to reach our Information Office
 
 Petrus Horn
 Email: hello@hornsoftwarearchitects.co.za
-Website: hornsa.com/atlas
+Website: hornsoftwarearchitects.co.za/atlas

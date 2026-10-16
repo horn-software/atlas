@@ -102,7 +102,7 @@ These Terms are governed by the laws of the Republic of South Africa. Any disput
 
 ## 11. Changes to These Terms
 
-We may update these Terms from time to time. We will notify you by email and by posting the updated Terms at hornsa.com/atlas/legal/terms. Continued use of Atlas after the effective date of any changes constitutes acceptance of the updated Terms.
+We may update these Terms from time to time. We will notify you by email and by posting the updated Terms at hornsoftwarearchitects.co.za/atlas/legal/terms. Continued use of Atlas after the effective date of any changes constitutes acceptance of the updated Terms.
 
 ---
 
@@ -110,4 +110,4 @@ We may update these Terms from time to time. We will notify you by email and by 
 
 Petrus Horn trading as Horn Software Architects
 Email: hello@hornsoftwarearchitects.co.za
-Website: hornsa.com/atlas
+Website: hornsoftwarearchitects.co.za/atlas
