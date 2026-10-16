@@ -1,0 +1,61 @@
+{
+  "fixture": "call_graph_basic",
+  "description": "Basic Python call graph: setup→load_config, setup→validate_config, setup→connect_db, Worker.restart→Worker.run→connect_db",
+  "reviewed_by": "petrushorn24@gmail.com",
+  "reviewed_at": "2026-10-15",
+  "expected_edges": [
+    {
+      "caller": "source/app.py.setup",
+      "callee": "source/app.py.load_config",
+      "confidence": "exact",
+      "evidence": "source/app.py:23"
+    },
+    {
+      "caller": "source/app.py.setup",
+      "callee": "source/app.py.validate_config",
+      "confidence": "exact",
+      "evidence": "source/app.py:24"
+    },
+    {
+      "caller": "source/app.py.setup",
+      "callee": "source/app.py.connect_db",
+      "confidence": "exact",
+      "evidence": "source/app.py:26"
+    },
+    {
+      "caller": "source/app.py.Worker.run",
+      "callee": "source/app.py.connect_db",
+      "confidence": "exact",
+      "evidence": "source/app.py:35"
+    },
+    {
+      "caller": "source/app.py.Worker.restart",
+      "callee": "source/app.py.Worker.run",
+      "confidence": "exact",
+      "evidence": "source/app.py:39"
+    }
+  ],
+  "expected_impact": [
+    {
+      "input": "connect_db",
+      "depth": 3,
+      "expected_callers": ["setup", "Worker.run", "Worker.restart"],
+      "notes": "connect_db is called by setup and Worker.run; Worker.restart calls Worker.run which calls connect_db"
+    },
+    {
+      "input": "load_config",
+      "depth": 1,
+      "expected_callers": ["setup"],
+      "notes": "load_config is only called directly by setup"
+    }
+  ],
+  "expected_config": [
+    {
+      "config_key": "DATABASE_URL",
+      "consumer": "connect_db",
+      "consumer_file": "source/app.py",
+      "notes": "os.getenv('DATABASE_URL') on line 16"
+    }
+  ],
+  "benchmark_notes": "Manually verified against source/app.py on 2026-10-15. No Atlas output was used to derive these relationships."
+}

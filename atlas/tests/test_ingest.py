@@ -152,6 +152,104 @@ def test_crawler():
         print("  PASS test_crawler")
 
 
+def test_crawler_skips_nested_copy_dirs():
+    """Nested copies of the project root should not be crawled again."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir) / "atlas"
+        root.mkdir()
+        (root / "main.py").write_text("print('root')\n", encoding="utf-8")
+
+        nested = root / "atlas"
+        nested.mkdir()
+        (nested / "duplicate.py").write_text("print('duplicate')\n", encoding="utf-8")
+
+        files = crawl(str(root))
+        assert [Path(f).name for f in files] == ["main.py"], files
+        print("  PASS test_crawler_skips_nested_copy_dirs")
+
+
+def test_crawler_skips_git_worktree_duplicates():
+    """A nested repo checkout should not be indexed as a separate copy."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir) / "app"
+        root.mkdir()
+        (root / "main.py").write_text("print('root')\n", encoding="utf-8")
+
+        nested = root / "vendor" / "app-copy"
+        nested.mkdir(parents=True)
+        (nested / ".git").mkdir()
+        (nested / "dup.py").write_text("print('dup')\n", encoding="utf-8")
+
+        files = crawl(str(root))
+        assert [Path(f).name for f in files] == ["main.py"], files
+        print("  PASS test_crawler_skips_git_worktree_duplicates")
+
+
+def test_call_graph_uses_qualified_names():
+    """Duplicate function names across files should resolve via qualified names."""
+    entities = [
+        {
+            "id": "a",
+            "kind": "function",
+            "name": "load",
+            "file_path": "pkg/one.py",
+            "language": "python",
+            "line_start": 1,
+            "line_end": 5,
+            "signature": "load()",
+            "docstring": "",
+            "body_preview": "def load():\n    return 1",
+            "calls": [],
+            "called_by": [],
+            "imports": [],
+            "parent_class": "",
+            "decorators": [],
+        },
+        {
+            "id": "b",
+            "kind": "function",
+            "name": "load",
+            "file_path": "pkg/two.py",
+            "language": "python",
+            "line_start": 1,
+            "line_end": 5,
+            "signature": "load()",
+            "docstring": "",
+            "body_preview": "def load():\n    return 2",
+            "calls": [],
+            "called_by": [],
+            "imports": [],
+            "parent_class": "",
+            "decorators": [],
+        },
+        {
+            "id": "c",
+            "kind": "function",
+            "name": "entry",
+            "file_path": "pkg/entry.py",
+            "language": "python",
+            "line_start": 1,
+            "line_end": 5,
+            "signature": "entry()",
+            "docstring": "",
+            "body_preview": "from pkg.one import load\nload()",
+            "calls": ["load"],
+            "called_by": [],
+            "imports": ["pkg.one.load"],
+            "parent_class": "",
+            "decorators": [],
+        },
+    ]
+
+    resolved = build_call_graph(entities)
+    entry = next(e for e in resolved if e["name"] == "entry")
+    assert "load" in entry["calls"]
+    load_hits = [e for e in resolved if e["name"] == "load"]
+    assert any("entry" in e["called_by"] for e in load_hits)
+    assert all("qualified_name" in e for e in resolved)
+    print("  PASS test_call_graph_uses_qualified_names")
+
+
 def test_parser():
     """Test that the parser extracts functions, classes, methods, and imports from Python."""
     with tempfile.TemporaryDirectory() as tmpdir:

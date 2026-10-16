@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hornsa-atlas"
-version = "0.1.9"
+version = "0.1.12"
 description = "Atlas — local MCP server for codebase ingestion, AI-powered query, impact analysis, and edge-case detection"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -28,6 +28,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "cryptography>=41.0",
     "mcp>=2.0",
+    "transformers>=4.40,<5",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +43,8 @@ all = ["hornsa-atlas[parsers]"]
 
 [project.scripts]
 atlas = "atlas.cli:main"
+atlas-benchmark = "atlas.benchmarking:main"
+atlas-prepare-benchmark = "atlas.prepare_benchmark:main"
 
 [project.urls]
 Homepage = "https://hornsa.com/atlas"
@@ -49,9 +52,15 @@ Documentation = "https://hornsa.com/atlas/docs"
 Repository = "https://github.com/horn-software/atlas"
 "Bug Tracker" = "https://github.com/horn-software/atlas/issues"
 
-[tool.setuptools.packages.find]
-where = [".."]
-include = ["atlas*"]
+[tool.setuptools]
+package-dir = { atlas = "." }
+packages = [
+    "atlas",
+    "atlas.edge",
+    "atlas.ingest",
+    "atlas.query",
+]
+include-package-data = false
 
 [tool.setuptools.package-data]
-atlas = ["py.typed"]
+atlas = ["py.typed", "benchmarking/*.json"]

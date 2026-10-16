@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "auth-flow-example",
+  "repository": {
+    "name": "example-service",
+    "path": "./path/to/pinned/checkout",
+    "size_bucket": "small",
+    "loc": 15000,
+    "git_commit": "replace-with-40-character-commit-sha"
+  },
+  "model": {
+    "name": "provider/model-id",
+    "version": "pinned-model-revision",
+    "temperature": 0,
+    "seed": 42
+  },
+  "adapter_versions": {
+    "baseline": "adapter-git-sha",
+    "atlas": "adapter-git-sha"
+  },
+  "entity_catalog": [
+    { "id": "stable-index-id-login", "name": "login", "kind": "function", "file_path": "src/auth.py" },
+    { "id": "stable-index-id-verify", "name": "verify_token", "kind": "function", "file_path": "src/tokens.py" },
+    { "id": "stable-index-id-session", "name": "create_session", "kind": "function", "file_path": "src/sessions.py" }
+  ],
+  "questions": [
+    {
+      "id": "auth-001",
+      "category": "discovery",
+      "prompt": "Where is the access token validated?",
+      "expected_entities": ["stable-index-id-verify"],
+      "expected_relationships": [],
+      "expected_impact": []
+    },
+    {
+      "id": "auth-002",
+      "category": "relationship",
+      "prompt": "Which functions call verify_token?",
+      "expected_entities": ["stable-index-id-verify"],
+      "expected_relationships": ["stable-index-id-login"],
+      "expected_impact": []
+    },
+    {
+      "id": "auth-003",
+      "category": "impact",
+      "prompt": "What is affected if verify_token changes?",
+      "expected_entities": ["stable-index-id-verify"],
+      "expected_relationships": [],
+      "expected_impact": ["stable-index-id-verify", "stable-index-id-login", "stable-index-id-session"]
+    }
+  ],
+  "conditions": {
+    "baseline": {
+      "command": ["python", "path/to/baseline_adapter.py"],
+      "settings": { "tools": ["Read", "Search", "Grep", "Glob"] }
+    },
+    "atlas": {
+      "command": ["python", "path/to/atlas_adapter.py"],
+      "settings": { "tools": ["Read", "Search", "Grep", "Glob", "Atlas query"] }
+    }
+  }
+}

@@ -149,7 +149,7 @@ def _run_ingest(project_dir: Path, project_id: str) -> dict:
     from ingest.crawler import crawl
     from ingest.parsers import parse_file
     from ingest.call_graph import build_call_graph
-    from ingest.indexer import create_index, index_documents
+    from ingest.indexer import create_index, delete_stale_documents, index_documents
 
     root = str(project_dir)
     files = crawl(root)
@@ -165,6 +165,7 @@ def _run_ingest(project_dir: Path, project_id: str) -> dict:
     count = index_documents(project_id, entities)
 
     bridges_count = 0
+    bridges = []
     try:
         from ingest.bridge_resolver import resolve_all_bridges
         bridges = resolve_all_bridges(entities, project_id)
@@ -174,15 +175,18 @@ def _run_ingest(project_dir: Path, project_id: str) -> dict:
     except Exception:
         pass
 
+    stale_removed = delete_stale_documents(project_id, entities + bridges)
+
     return {
         "indexed": count + bridges_count,
         "files": len(files),
         "entities": len(entities),
         "bridges": bridges_count,
+        "stale_removed": stale_removed,
     }
 
 
-def _run_train(project_dir: Path, project_id: str, count: int = 2500, epochs: int = 30):
+def _run_train(project_dir: Path, project_id: str, count: int = 12000, epochs: int = 40):
     from ingest.crawler import crawl
     from ingest.parsers import parse_file
     from ingest.call_graph import build_call_graph
@@ -212,10 +216,30 @@ def _run_train(project_dir: Path, project_id: str, count: int = 2500, epochs: in
         data=str(data_path),
         epochs=epochs,
         lr=0.001,
-        batch=32,
+        batch=64,
         model_dir=str(model_dir),
     )
     run_train(train_args)
+
+
+def _prepare_semantic_model() -> bool:
+    """Download and validate the pinned local semantic model during init."""
+    try:
+        from query.semantic import MODEL_NAME, _load_encoder
+        _load_encoder()
+    except ImportError as exc:
+        print(f"  [WARN] Semantic model dependencies are unavailable: {exc}")
+        print("    Install them with: python -m pip install 'transformers>=4.40,<5'")
+        print("    Atlas will use lexical search until semantic retrieval is available.")
+        return False
+    except OSError as exc:
+        print(f"  [WARN] Could not download or load {MODEL_NAME}: {exc}")
+        print("    Check your network connection and rerun atlas init to retry.")
+        print("    Atlas will use lexical search until the model is cached.")
+        return False
+
+    print(f"  {MODEL_NAME} is cached and ready for local CPU inference.")
+    return True
 
 
 def cmd_init(project_dir: Path):
@@ -226,23 +250,28 @@ def cmd_init(project_dir: Path):
     print(f"  project_id: {project_id}")
     print()
 
-    print("[1/4] Checking Meilisearch ...")
+    print("[1/5] Checking Meilisearch ...")
     if _meili_running():
         print("  Meilisearch already running.")
     else:
         _start_meilisearch(project_dir)
 
     print()
-    print("[2/4] Writing .env ...")
+    print("[2/5] Writing .env ...")
     _ensure_env(project_dir)
 
     print()
-    print("[3/4] Ingesting codebase ...")
+    print("[3/5] Ingesting codebase ...")
     result = _run_ingest(project_dir, project_id)
     print(f"  {result['files']} files  |  {result['entities']} entities  |  {result['bridges']} bridges  ->  {result['indexed']} documents indexed")
 
     print()
-    print("[4/4] Training query model ...")
+    print()
+    print("[4/5] Preparing semantic retrieval model ...")
+    _prepare_semantic_model()
+
+    print()
+    print("[5/5] Training query model ...")
     from license import load_license
     lic = load_license()
     if lic["valid"] and lic["tier"] in ("pro", "team", "enterprise"):

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hornsa.com/atlas/schemas/benchmark-results-1.json",
+  "title": "Atlas benchmark results",
+  "type": "object",
+  "required": ["schema_version", "benchmark_id", "created_at", "manifest_sha256", "entity_catalog_sha256", "questions", "reproducibility", "summary", "observations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "benchmark_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "manifest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "entity_catalog_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "prompt", "expected_entities", "expected_relationships", "expected_impact"],
+        "properties": {
+          "id": { "type": "string" },
+          "category": { "type": "string" },
+          "prompt": { "type": "string" },
+          "expected_entities": { "type": "array", "items": { "type": "string" } },
+          "expected_relationships": { "type": "array", "items": { "type": "string" } },
+          "expected_impact": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "reproducibility": {
+      "type": "object",
+      "required": ["repository", "model", "tool_policies", "repeats", "bootstrap_seed", "bootstrap_iterations", "adapter_versions"],
+      "properties": {
+        "repository": { "type": "object" },
+        "model": { "type": "object" },
+        "tool_policies": {
+          "type": "object",
+          "required": ["baseline", "atlas"],
+          "properties": {
+            "baseline": { "type": "array", "items": { "type": "string" } },
+            "atlas": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "repeats": { "type": "integer", "minimum": 1 },
+        "bootstrap_seed": { "type": "integer" },
+        "bootstrap_iterations": { "type": "integer", "minimum": 1 },
+        "adapter_versions": { "type": "object" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["conditions", "effects", "paired_observations"],
+      "properties": {
+        "conditions": {
+          "type": "object",
+          "required": ["baseline", "atlas"],
+          "properties": {
+            "baseline": { "$ref": "#/$defs/metrics" },
+            "atlas": { "$ref": "#/$defs/metrics" }
+          }
+        },
+        "effects": { "type": "object" },
+        "paired_observations": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question_id", "category", "repeat", "condition", "answer", "input_tokens", "output_tokens", "tool_calls", "entity_mentions", "entity_mention_ids", "relationship_entities", "impact_entities", "started_at", "ended_at", "latency_seconds", "entity_accuracy", "relationship", "impact"],
+        "properties": {
+          "question_id": { "type": "string" },
+          "category": { "type": "string" },
+          "repeat": { "type": "integer", "minimum": 0 },
+          "condition": { "enum": ["baseline", "atlas"] },
+          "answer": { "type": "string" },
+          "input_tokens": { "type": "integer", "minimum": 0 },
+          "output_tokens": { "type": "integer", "minimum": 0 },
+          "response_format": { "enum": ["json", "embedded_json", "markdown_fallback", "synthetic"] },
+          "tool_calls": {
+            "type": "object",
+            "properties": {
+              "Read": { "type": "integer", "minimum": 0 },
+              "Search": { "type": "integer", "minimum": 0 },
+              "Grep": { "type": "integer", "minimum": 0 },
+              "Glob": { "type": "integer", "minimum": 0 },
+              "Atlas query": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          "entity_mentions": { "type": "array", "items": { "type": "string" } },
+          "entity_mention_ids": { "type": "array", "items": { "type": "string" } },
+          "relationship_entities": { "type": "array", "items": { "type": "string" } },
+          "impact_entities": { "type": "array", "items": { "type": "string" } },
+          "started_at": { "type": "string", "format": "date-time" },
+          "ended_at": { "type": "string", "format": "date-time" },
+          "latency_seconds": { "type": "number", "minimum": 0 },
+          "entity_accuracy": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+          "relationship": { "$ref": "#/$defs/scores" },
+          "impact": { "$ref": "#/$defs/scores" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "scores": {
+      "type": "object",
+      "required": ["precision", "recall", "f1"],
+      "properties": {
+        "precision": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "recall": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "f1": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["tool_calls", "total_tokens", "latency_seconds", "entity_accuracy", "relationship_f1", "impact_f1"],
+      "properties": {
+        "tool_calls": { "type": ["number", "null"] },
+        "total_tokens": { "type": ["number", "null"] },
+        "latency_seconds": { "type": ["number", "null"] },
+        "entity_accuracy": { "type": ["number", "null"] },
+        "relationship_f1": { "type": ["number", "null"] },
+        "impact_f1": { "type": ["number", "null"] }
+      }
+    }
+  },
+  "additionalProperties": false
+}

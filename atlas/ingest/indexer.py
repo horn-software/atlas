@@ -24,14 +24,17 @@ INDEX_SETTINGS = {
         "name", "signature", "docstring",
         "body_preview", "calls", "called_by",
         "imports", "file_path",
-        "route_path", "variable_name",
+        "route_path", "variable_name", "search_terms",
+        "event_type", "handler_name",
     ],
     "filterableAttributes": [
-        "kind", "name", "file_path", "language",
-        "line_start", "calls", "called_by",
+        "id", "entity_id", "kind", "name", "qualified_name", "file_path", "language",
+        "line_start", "calls", "called_by", "called_by_ids",
         "imports", "parent_class", "decorators",
         "bridge_type", "route_path", "caller_language",
         "target_language", "variable_name", "target_function",
+        "confidence", "provenance",
+        "repo_id", "event_type", "handler_name",
     ],
     "sortableAttributes": ["file_path", "line_start"],
 }
@@ -118,7 +121,10 @@ def index_documents(project_id: str, documents: list[dict], batch_size: int = 50
     total = 0
 
     for i in range(0, len(documents), batch_size):
-        batch = documents[i : i + batch_size]
+        batch = [
+            _add_search_terms(document)
+            for document in documents[i : i + batch_size]
+        ]
         resp = _requests.post(
             url,
             json=batch,
@@ -130,6 +136,68 @@ def index_documents(project_id: str, documents: list[dict], batch_size: int = 50
         total += len(batch)
 
     return total
+
+
+def _add_search_terms(document: dict) -> dict:
+    """Add identifier pieces and common aliases without mutating parser output."""
+    from query.synonyms import searchable_terms
+
+    searchable_fields = (
+        "name", "signature", "docstring", "body_preview", "calls",
+        "called_by", "imports", "file_path", "route_path", "variable_name",
+    )
+    text = " ".join(
+        str(value)
+        for field in searchable_fields
+        if (value := document.get(field))
+    )
+    enriched = dict(document)
+    enriched["search_terms"] = searchable_terms(text)
+    return enriched
+
+
+def delete_stale_documents(project_id: str, current_documents: list[dict],
+                           batch_size: int = 500) -> int:
+    """Remove indexed documents that are no longer present in the source tree."""
+    if _requests is None:
+        raise RuntimeError("requests library not installed")
+    if not current_documents:
+        return 0
+
+    idx = _index_name(project_id)
+    url = f"{MEILI_URL}/indexes/{idx}/documents"
+    current_ids = {doc["id"] for doc in current_documents if doc.get("id") is not None}
+    existing_ids = []
+    offset = 0
+
+    while True:
+        resp = _requests.get(
+            url,
+            params={"fields": "id", "limit": batch_size, "offset": offset},
+            headers=_headers(),
+            timeout=10,
+        )
+        resp.raise_for_status()
+        page = resp.json().get("results", [])
+        existing_ids.extend(
+            doc["id"] for doc in page if doc.get("id") is not None
+        )
+        if len(page) < batch_size:
+            break
+        offset += len(page)
+
+    stale_ids = [doc_id for doc_id in existing_ids if doc_id not in current_ids]
+    for i in range(0, len(stale_ids), batch_size):
+        resp = _requests.post(
+            f"{url}/delete-batch",
+            json=stale_ids[i:i + batch_size],
+            headers=_headers(),
+            timeout=30,
+        )
+        resp.raise_for_status()
+        _wait_for_task(resp)
+
+    return len(stale_ids)
 
 
 def delete_index(project_id: str):
@@ -186,11 +254,50 @@ def search(project_id: str, query: str, filters: str | None = None, limit: int =
 
     resp = _requests.post(url, json=body, headers=_headers(), timeout=10)
     resp.raise_for_status()
-    hits = resp.json().get("hits", [])
-    # Drop low-relevance hits; remove the internal score field before returning
+    return _filter_hits(resp.json().get("hits", []), min_score)
+
+
+def search_many(project_id: str, queries: list[str], filters: str | None = None,
+                limit: int = 10, min_score: float = 0.05) -> list[list[dict]]:
+    """Run independent searches in one Meilisearch multi-search request."""
+    if _requests is None:
+        raise RuntimeError("requests library not installed")
+    if not queries:
+        return []
+
+    idx = _index_name(project_id)
+    request_queries = []
+    for query in queries:
+        item = {
+            "indexUid": idx,
+            "q": query,
+            "limit": limit,
+            "showRankingScore": True,
+        }
+        if filters:
+            item["filter"] = filters
+        request_queries.append(item)
+
+    resp = _requests.post(
+        f"{MEILI_URL}/multi-search",
+        json={"queries": request_queries},
+        headers=_headers(),
+        timeout=30,
+    )
+    resp.raise_for_status()
+    results = resp.json().get("results", [])
+    if len(results) != len(queries):
+        raise RuntimeError(
+            f"Meilisearch returned {len(results)} results for {len(queries)} queries"
+        )
+    return [_filter_hits(result.get("hits", []), min_score) for result in results]
+
+
+def _filter_hits(hits: list[dict], min_score: float) -> list[dict]:
+    """Remove low-relevance hits and their internal ranking score."""
     out = []
-    for h in hits:
-        score = h.pop("_rankingScore", 1.0)
+    for hit in hits:
+        score = hit.pop("_rankingScore", 1.0)
         if score >= min_score:
-            out.append(h)
+            out.append(hit)
     return out

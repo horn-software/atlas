@@ -1,0 +1,52 @@
+{
+  "fixture": "route_event",
+  "description": "Flask route registrations and Celery task declarations",
+  "reviewed_by": "petrushorn24@gmail.com",
+  "reviewed_at": "2026-10-15",
+  "expected_routes": [
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "handler": "get_users",
+      "handler_file": "source/api.py",
+      "notes": "@app.route('/api/users', methods=['GET'])"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/:param",
+      "handler": "get_user",
+      "handler_file": "source/api.py",
+      "notes": "@app.route('/api/users/<int:user_id>') normalised to :param"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users",
+      "handler": "create_user",
+      "handler_file": "source/api.py",
+      "notes": "@app.route('/api/users', methods=['POST'])"
+    }
+  ],
+  "expected_events": [
+    {
+      "event_type": "celery_task",
+      "handler": "send_welcome_email",
+      "handler_file": "source/tasks.py",
+      "notes": "@celery.task decorator"
+    },
+    {
+      "event_type": "celery_task",
+      "handler": "generate_report",
+      "handler_file": "source/tasks.py",
+      "notes": "@celery.task decorator"
+    }
+  ],
+  "expected_config": [
+    {
+      "config_key": "DATABASE_URL",
+      "consumer": "_get_db_url",
+      "consumer_file": "source/api.py",
+      "notes": "os.getenv('DATABASE_URL') in _get_db_url"
+    }
+  ],
+  "benchmark_notes": "Manually verified against source files on 2026-10-15."
+}

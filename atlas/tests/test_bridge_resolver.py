@@ -178,7 +178,7 @@ def test_http_bridge_login():
     assert b["target_language"] == "python"
     assert b["caller_function"] == "loginUser"
     assert b["target_function"] == "login"
-    assert b["confidence"] == "confirmed"
+    assert b["confidence"] == "exact"
     print("  PASS test_http_bridge_login")
 
 
@@ -201,7 +201,7 @@ def test_env_bridge_secret_key():
     b = next(b for b in bridges if b["variable_name"] == "SECRET_KEY")
     assert "python" in b["languages"]
     assert "typescript" in b["languages"]
-    assert b["confidence"] == "confirmed"
+    assert b["confidence"] == "exact"
     print("  PASS test_env_bridge_secret_key")
 
 
@@ -214,7 +214,7 @@ def test_env_bridge_database_url():
 
 
 def test_type_bridge_user():
-    """User class (Python BaseModel) + User interface (TypeScript) → possible_bridge."""
+    """User class (Python BaseModel) + User interface (TypeScript) → heuristic bridge."""
     bridges = detect_type_bridges(ALL_ENTITIES, PROJECT_ID)
     assert bridges, "No type bridges found"
 
@@ -224,7 +224,7 @@ def test_type_bridge_user():
     b = next(b for b in bridges if b.get("canonical_name", "").lower() == "user")
     assert "python" in b["languages"]
     assert "typescript" in b["languages"]
-    assert b["confidence"] == "possible_bridge"
+    assert b["confidence"] == "heuristic"
     print("  PASS test_type_bridge_user")
 
 

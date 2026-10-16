@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hornsa.com/atlas/schemas/benchmark-manifest-1.json",
+  "title": "Atlas benchmark manifest",
+  "type": "object",
+  "required": ["schema_version", "benchmark_id", "repository", "model", "entity_catalog", "questions", "conditions"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "benchmark_id": { "type": "string", "minLength": 1 },
+    "repository": {
+      "type": "object",
+      "required": ["name", "path", "size_bucket", "git_commit"],
+      "properties": {
+        "name": { "type": "string" },
+        "path": { "type": "string" },
+        "size_bucket": { "enum": ["small", "medium", "large"] },
+        "loc": { "type": ["integer", "null"], "minimum": 0 },
+        "git_commit": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "model": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "temperature": { "type": ["number", "null"], "minimum": 0 },
+        "seed": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "entity_catalog": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "kind": { "type": "string" },
+          "file_path": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "prompt", "expected_entities"],
+        "properties": {
+          "id": { "type": "string" },
+          "category": { "enum": ["discovery", "relationship", "impact", "cross_language"] },
+          "prompt": { "type": "string", "minLength": 1 },
+          "expected_entities": { "type": "array", "items": { "type": "string" } },
+          "expected_relationships": { "type": "array", "items": { "type": "string" } },
+          "expected_impact": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": true
+      }
+    },
+    "conditions": {
+      "type": "object",
+      "required": ["baseline", "atlas"],
+      "properties": {
+        "baseline": { "$ref": "#/$defs/condition" },
+        "atlas": { "$ref": "#/$defs/condition" }
+      },
+      "additionalProperties": false
+    },
+    "adapter_versions": { "type": "object", "additionalProperties": { "type": "string" } }
+  },
+  "$defs": {
+    "condition": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "settings": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

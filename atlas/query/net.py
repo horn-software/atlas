@@ -1,13 +1,16 @@
 """
 BiLSTM token classifier with kind classification head for code queries.
 torch.nn only — randomly initialised, no pretrained weights.
-~600K params, same pattern as knowledge/model/.
+~1.1M params; split identifier pieces improve handling of unseen symbols while
+keeping inference lightweight enough for CPU use.
 
 Two heads:
   1. Token classifier (Linear 256→2): KEEP / DROP per token
   2. Kind classifier  (Linear 256→6): file / function / class / method / import / any
      (applied to mean-pooled hidden state)
 """
+import re
+
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -19,8 +22,20 @@ KIND_LABELS = ["file", "function", "class", "method", "import", "any"]
 KIND_TO_IDX = {k: i for i, k in enumerate(KIND_LABELS)}
 
 
+def query_subtokens(token: str) -> list[str]:
+    """Split identifiers and punctuation into vocabulary-friendly word pieces."""
+    pieces = []
+    for segment in re.findall(r"[A-Za-z0-9]+", token):
+        words = re.findall(
+            r"[A-Z]+(?=[A-Z][a-z]|\b)|[A-Z]?[a-z]+|[0-9]+",
+            segment,
+        )
+        pieces.extend(word.casefold() for word in words)
+    return pieces or [token.casefold()]
+
+
 class CodeQueryModel(nn.Module):
-    def __init__(self, vocab_size: int, embed_dim: int = 64, hidden: int = 128,
+    def __init__(self, vocab_size: int, embed_dim: int = 96, hidden: int = 160,
                  num_layers: int = 2, dropout: float = 0.3, num_kinds: int = 6):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=PAD_IDX)
@@ -44,9 +59,13 @@ class CodeQueryModel(nn.Module):
 
         token_logits = self.token_head(out)
 
-        mask = torch.arange(out.size(1), device=out.device).unsqueeze(0) < lengths.unsqueeze(1)
+        device_lengths = lengths.to(out.device)
+        mask = (
+            torch.arange(out.size(1), device=out.device).unsqueeze(0)
+            < device_lengths.unsqueeze(1)
+        )
         masked = out * mask.unsqueeze(2).float()
-        pooled = masked.sum(dim=1) / lengths.unsqueeze(1).float().to(out.device)
+        pooled = masked.sum(dim=1) / device_lengths.unsqueeze(1).float()
         kind_logits = self.kind_head(pooled)
 
         return token_logits, kind_logits

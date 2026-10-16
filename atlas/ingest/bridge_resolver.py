@@ -70,7 +70,8 @@ def _entity_text(ent: dict) -> str:
 
 def _base_bridge(bid: str, bridge_type: str, project_id: str,
                   name: str, language: str, file_path: str,
-                  signature: str, confidence: str) -> dict:
+                  signature: str, confidence: str,
+                  provenance: str = "ast") -> dict:
     return {
         "id": bid,
         "kind": "bridge",
@@ -84,12 +85,15 @@ def _base_bridge(bid: str, bridge_type: str, project_id: str,
         "body_preview": "",
         "calls": [],
         "called_by": [],
+        "called_by_ids": [],
         "imports": [],
         "parent_class": "",
         "decorators": [],
         "line_start": 0,
         "line_end": 0,
         "confidence": confidence,
+        "provenance": provenance,
+        "evidence": [{"file": file_path, "line": 0}],
     }
 
 
@@ -148,6 +152,47 @@ _ROUTE_DEF_RE: dict[str, list] = {
 }
 
 
+def build_route_registry(entities: list[dict]) -> list[dict]:
+    """Build a route registry with method, handler, file, and middleware metadata."""
+    routes: list[dict] = []
+    for ent in entities:
+        lang = ent.get("language", "")
+        pats = _ROUTE_DEF_RE.get(lang, [])
+        if not pats:
+            continue
+        text = _entity_text(ent)
+        for pat in pats:
+            for m in pat.finditer(text):
+                route_path = _norm_route(m.group(1))
+                if not _is_api_path(route_path):
+                    continue
+                method = "GET"
+                if "post" in (m.group(0) or "").lower():
+                    method = "POST"
+                elif "put" in (m.group(0) or "").lower():
+                    method = "PUT"
+                elif "delete" in (m.group(0) or "").lower():
+                    method = "DELETE"
+                elif "patch" in (m.group(0) or "").lower():
+                    method = "PATCH"
+
+                middleware = []
+                if "middleware" in text.lower() or "use(" in text:
+                    for mw in re.finditer(r"(?:middleware|use)\s*\(\s*['\"]([^'\"]+)['\"]", text, re.I):
+                        middleware.append(mw.group(1))
+
+                routes.append({
+                    "language": lang,
+                    "file_path": ent.get("file_path", ""),
+                    "function": ent.get("name", ""),
+                    "qual_name": ent.get("qualified_name", ent.get("name", "")),
+                    "route_path": route_path,
+                    "method": method,
+                    "middleware": sorted(set(middleware)),
+                })
+    return routes
+
+
 def detect_http_bridges(entities: list[dict], project_id: str) -> list[dict]:
     """Bridge 1 — detect HTTP caller → route handler cross-language links."""
     callers: list[dict] = []
@@ -168,36 +213,21 @@ def detect_http_bridges(entities: list[dict], project_id: str) -> list[dict]:
                 "language": lang,
                 "file": ent.get("file_path", ""),
                 "function": ent.get("name", ""),
+                "qual_name": ent.get("qualified_name", ent.get("name", "")),
                 "paths": paths,
             })
 
-    routes: list[dict] = []
-    for ent in entities:
-        lang = ent.get("language", "")
-        pats = _ROUTE_DEF_RE.get(lang, [])
-        if not pats:
-            continue
-        text = _entity_text(ent)
-        for pat in pats:
-            for m in pat.finditer(text):
-                norm = _norm_route(m.group(1))
-                if _is_api_path(norm):
-                    routes.append({
-                        "language": lang,
-                        "file": ent.get("file_path", ""),
-                        "function": ent.get("name", ""),
-                        "path": norm,
-                    })
+    routes = build_route_registry(entities)
 
     seen: dict[str, dict] = {}
     for caller in callers:
         for cpath in caller["paths"]:
             for route in routes:
-                if route["file"] == caller["file"]:
+                if route["file_path"] == caller["file"]:
                     continue
-                rpath = route["path"]
+                rpath = route["route_path"]
                 if cpath == rpath or cpath.startswith(rpath.rstrip("/") + "/"):
-                    bid = _bridge_id(caller["file"], route["file"], rpath, project_id)
+                    bid = _bridge_id(caller["file"], route["file_path"], rpath, project_id)
                     if bid not in seen:
                         b = _base_bridge(
                             bid=bid,
@@ -211,16 +241,21 @@ def detect_http_bridges(entities: list[dict], project_id: str) -> list[dict]:
                                 f" → {route['language']}:{route['function']}"
                                 f" via {rpath}"
                             ),
-                            confidence="confirmed",
+                            confidence="exact",
+                            provenance="ast",
                         )
                         b.update({
                             "route_path": rpath,
+                            "method": route.get("method", "GET"),
                             "caller_language": caller["language"],
                             "caller_file": caller["file"],
                             "caller_function": caller["function"],
+                            "caller_qual_name": caller.get("qual_name"),
                             "target_language": route["language"],
-                            "target_file": route["file"],
+                            "target_file": route["file_path"],
                             "target_function": route["function"],
+                            "target_qual_name": route.get("qual_name"),
+                            "middleware": route.get("middleware", []),
                         })
                         seen[bid] = b
     return list(seen.values())
@@ -289,7 +324,8 @@ def detect_env_bridges(entities: list[dict], project_id: str) -> list[dict]:
             language=sorted(langs)[0],
             file_path=files[0],
             signature=f"{var} shared across {', '.join(sorted(langs))}",
-            confidence="confirmed",
+            confidence="exact",
+            provenance="ast",
         )
         b.update({
             "variable_name": var,
@@ -339,7 +375,8 @@ def detect_config_bridges(entities: list[dict], project_id: str) -> list[dict]:
             language=sorted(langs)[0],
             file_path=files[0],
             signature=f"{cfg} shared across {', '.join(sorted(langs))}",
-            confidence="confirmed",
+            confidence="exact",
+            provenance="ast",
         )
         b.update({
             "config_file": cfg,
@@ -428,7 +465,8 @@ def detect_db_bridges(entities: list[dict], project_id: str) -> list[dict]:
             language=sorted(langs)[0],
             file_path=files[0],
             signature=f"table {table} accessed in {', '.join(sorted(langs))}",
-            confidence="confirmed",
+            confidence="exact",
+            provenance="ast",
         )
         b.update({
             "table_name": table,
@@ -534,7 +572,8 @@ def detect_type_bridges(entities: list[dict], project_id: str) -> list[dict]:
             language=sorted(langs)[0],
             file_path=files[0],
             signature=f"{display} defined in {', '.join(sorted(langs))}",
-            confidence="possible_bridge",  # low confidence — see OPINION #3
+            confidence="heuristic",
+            provenance="ast",
         )
         b.update({
             "type_name": display,
