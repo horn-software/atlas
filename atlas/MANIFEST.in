@@ -2,3 +2,11 @@ prune tests
 global-exclude __pycache__
 global-exclude *.py[cod]
 global-exclude .env
+global-exclude private*.pem
+exclude keygen.py
+exclude edge/bridge.py
+exclude query/generate_data.py
+exclude query/train.py
+exclude build_pro.py
+prune query/model
+exclude query/data.jsonl

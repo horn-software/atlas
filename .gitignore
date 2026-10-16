@@ -31,6 +31,7 @@ atlas/query/model/config.json
 atlas/keygen.py
 atlas/edge/bridge.py
 license_server/
+dist-pro/
 
 # Atlas — private keys (never commit these)
 .atlas/

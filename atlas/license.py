@@ -156,6 +156,15 @@ def activate(key: str) -> dict:
     return result
 
 
+def pro_component_missing_message(feature: str) -> str:
+    """User-facing text for when a Pro-only module is not installed locally."""
+    return (
+        f"{feature} needs the Atlas Pro components, which are delivered separately "
+        "from the public package. Contact hello@hornsoftwarearchitects.co.za to get "
+        "them, then install the wheel you receive with: pip install <file>.whl"
+    )
+
+
 def requires_pro():
     """
     Gate a feature to Pro tier and above.

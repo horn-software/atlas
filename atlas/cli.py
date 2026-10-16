@@ -190,8 +190,13 @@ def _run_train(project_dir: Path, project_id: str, count: int = 12000, epochs: i
     from ingest.crawler import crawl
     from ingest.parsers import parse_file
     from ingest.call_graph import build_call_graph
-    from query.generate_data import generate_from_entities
-    from query.train import train as run_train
+    try:
+        from query.generate_data import generate_from_entities
+        from query.train import train as run_train
+    except ImportError:
+        from license import pro_component_missing_message
+        print(f"  Skipped — {pro_component_missing_message('Query model training')}")
+        return
 
     root = str(project_dir)
     files = crawl(root)

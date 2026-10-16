@@ -3,6 +3,7 @@ Test the query model architecture and inference path.
 Does NOT require a trained model — tests the untrained model shape
 and the data generation pipeline.
 """
+import pytest
 import json
 import os
 import sys
@@ -489,7 +490,7 @@ def test_query_subtokens_split_identifiers():
 
 
 def test_generation_labels_keep_only_search_terms():
-    from query.generate_data import _label_tokens
+    _label_tokens = pytest.importorskip("query.generate_data")._label_tokens
 
     assert _label_tokens(
         ["what", "function", "handles", "authentication"],
@@ -498,7 +499,7 @@ def test_generation_labels_keep_only_search_terms():
 
 
 def test_training_split_keeps_targets_separate():
-    from query.train import split_examples
+    split_examples = pytest.importorskip("query.train").split_examples
 
     examples = [
         {
@@ -570,7 +571,7 @@ def test_data_generation():
     """Test that generate_data produces valid training examples."""
     from ingest.parsers import parse_file
     from ingest.call_graph import build_call_graph
-    from query.generate_data import generate_from_entities
+    generate_from_entities = pytest.importorskip("query.generate_data").generate_from_entities
 
     sample = '''
 def authenticate(username: str, password: str) -> bool:
@@ -610,7 +611,7 @@ class UserManager:
 
 
 def test_training_corpus_includes_unseen_concepts_and_multi_intent_queries():
-    from query.generate_data import generate_from_entities
+    generate_from_entities = pytest.importorskip("query.generate_data").generate_from_entities
 
     examples = generate_from_entities(
         [

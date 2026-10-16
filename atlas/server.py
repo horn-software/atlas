@@ -979,7 +979,11 @@ def _handle_edge_check(args: dict) -> dict:
     from license import requires_pro
     requires_pro()
     from edge.impact import find_impact
-    from edge.bridge import check_code, check_batch
+    try:
+        from edge.bridge import check_code, check_batch
+    except ImportError:
+        from license import pro_component_missing_message
+        return {"error": pro_component_missing_message("atlas_edge_check")}
 
     code = args["code"]
     functions = args["functions"]
